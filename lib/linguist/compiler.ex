@@ -28,7 +28,7 @@ defmodule Linguist.Compiler do
   end
   """
 
-  @interpol_rgx  ~r/
+  @interpol_rgx ~r/
                    (?<head>)
                    (?<!%) %{.+?}
                    (?<tail>)
@@ -38,7 +38,8 @@ defmodule Linguist.Compiler do
   @simple_interpol "%{"
 
   def compile(translations) do
-    langs = Dict.keys translations
+    langs = Keyword.keys(translations)
+
     translations =
       for {locale, source} <- translations do
         deftranslations(to_string(locale), "", source)
@@ -48,13 +49,17 @@ defmodule Linguist.Compiler do
       def t(locale, path, binding \\ [])
       unquote(translations)
       def t(_locale, _path, _bindings), do: {:error, :no_translation}
+
       def t!(locale, path, bindings \\ []) do
         case t(locale, path, bindings) do
-          {:ok, translation} -> translation
+          {:ok, translation} ->
+            translation
+
           {:error, :no_translation} ->
             raise %NoTranslationError{message: "#{locale}: #{path}"}
         end
       end
+
       def locales do
         unquote(langs)
       end
@@ -78,23 +83,26 @@ defmodule Linguist.Compiler do
   end
 
   defp interpolate(string, var) do
-    @interpol_rgx 
-      |> Regex.split(string, on: [:head, :tail])
-      |> Enum.reduce( "", fn
+    @interpol_rgx
+    |> Regex.split(string, on: [:head, :tail])
+    |> Enum.reduce("", fn
       <<"%{" <> rest>>, acc ->
-        key      = String.to_atom(String.rstrip(rest, ?}))
+        key = String.to_atom(String.trim_trailing(rest, "}"))
         bindings = Macro.var(var, __MODULE__)
+
         quote do
-          unquote(acc) <> to_string(Dict.fetch!(unquote(bindings), unquote(key)))
+          unquote(acc) <> to_string(Keyword.fetch!(unquote(bindings), unquote(key)))
         end
-      segment, acc -> quote do: (unquote(acc) <> unquote(unescape(segment)))
-    end )
+
+      segment, acc ->
+        quote do: unquote(acc) <> unquote(unescape(segment))
+    end)
   end
 
   defp append_path("", next), do: to_string(next)
   defp append_path(current, next), do: "#{current}.#{next}"
 
   defp unescape(segment) do
-      Regex.replace @escaped_interpol_rgx, segment, @simple_interpol
+    Regex.replace(@escaped_interpol_rgx, segment, @simple_interpol)
   end
 end

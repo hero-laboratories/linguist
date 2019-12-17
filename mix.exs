@@ -1,4 +1,4 @@
-Code.ensure_loaded?(Hex) and Hex.start
+Code.ensure_loaded?(Hex) and Hex.start()
 
 defmodule Linguist.Mixfile do
   use Mix.Project
@@ -7,8 +7,8 @@ defmodule Linguist.Mixfile do
     [
       app: :linguist,
       version: "0.1.5",
-      elixir: "~> 1.0",
-      deps: deps,
+      elixir: "~> 1.7",
+      deps: deps(),
       package: [
         contributors: ["Chris McCord"],
         licenses: ["MIT"],
